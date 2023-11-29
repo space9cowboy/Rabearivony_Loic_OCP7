@@ -32,6 +32,42 @@ const signup = async (req, res) => {
   }
 };
 
+// Contrôleur pour gérer l'authentification d'un utilisateur
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Vérifier si l'utilisateur existe
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res
+        .status(401)
+        .json({ message: "Adresse e-mail ou mot de passe incorrect." });
+    }
+
+    // Vérifier le mot de passe
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res
+        .status(401)
+        .json({ message: "Adresse e-mail ou mot de passe incorrect." });
+    }
+
+    // Générer un token web JSON signé
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.RANDOM_TOKEN_SECRET,
+      { expiresIn: "100000s" }
+    );
+
+    return res.status(200).json({ userId: user._id, token });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Erreur serveur." });
+  }
+};
+
 module.exports = {
   signup,
+  login,
 };
