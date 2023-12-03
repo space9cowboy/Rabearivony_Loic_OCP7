@@ -1,9 +1,13 @@
 require("dotenv").config();
-const express = require("express");
 const mongoose = require("mongoose");
+const express = require("express");
+const path = require("path");
 const cors = require("cors");
+const helmet = require("helmet");
+const bodyParser = require("body-parser");
 
 const userRoutes = require("./routes/user.route");
+const bookRoutes = require("./routes/book.route");
 
 const app = express();
 
@@ -12,7 +16,7 @@ const app = express();
  */
 mongoose
   .connect(
-    `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@mon-vieux-grimoire.8l6kfra.mongodb.net/?retryWrites=true&w=majority`,
+    `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_LINK}?retryWrites=true&w=majority`,
     {
       useNewUrlParser: true,
       useUnifiedTopology: true,
@@ -22,6 +26,13 @@ mongoose
     console.log("Connexion à MongoDB réussie");
   })
   .catch((error) => console.error("Erreur de connexion à MongoDB:", error));
+
+// Configurations for "body-parser"
+app.use(
+  bodyParser.urlencoded({
+    extended: true,
+  })
+);
 
 /**
  * * Régler les problèmes de CORS
@@ -42,8 +53,16 @@ app.use((req, res, next) => {
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
+
+app.use("/images", express.static(path.join(__dirname, "images")));
 
 // Routes
 app.use(userRoutes);
+app.use(bookRoutes);
 
 module.exports = app;
