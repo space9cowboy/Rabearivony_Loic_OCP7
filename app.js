@@ -11,6 +11,12 @@ const bookRoutes = require("./routes/book.route");
 
 const app = express();
 
+const toobusy = require("toobusy-js");
+
+const hpp = require("hpp");
+
+const nocache = require("nocache");
+
 /**
  * * Connexion à la base de données
  */
@@ -52,17 +58,39 @@ app.use((req, res, next) => {
 
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Définir les limites de taille des requêtes (OWASP)
+app.use(express.urlencoded({ extended: true, limit: "1kb" }));
+app.use(express.json({ limit: "1kb" }));
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
   })
 );
+// surveiller la boucle d'évenement contre les attaques DoS (OWASP)
+app.use(function (req, res, next) {
+  if (toobusy()) {
+    // log if you see necessary
+    res.status(503).send("Server Too Busy");
+  } else {
+    next();
+  }
+});
+// prévenir la pollution des paramètres http (OWASP)
+app.use(hpp());
+//empêcher les navigateurs de mettre en cache les réponses données (OWASP)
+app.use(nocache());
 
 app.use("/images", express.static(path.join(__dirname, "images")));
 
 // Routes
 app.use(userRoutes);
 app.use(bookRoutes);
+
+//gérer l'exception non capturé (OWASP)
+process.on("uncaughtException", function (err) {
+  // clean up allocated resources
+  // log necessary error details to log files
+  process.exit(); // exit the process to avoid unknown state
+});
 
 module.exports = app;

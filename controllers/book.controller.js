@@ -85,6 +85,12 @@ const updateBookById = async (req, res) => {
     : {
         ...req.body,
       };
+
+  // Ajout de la modification des évaluations s'il y a lieu
+  if (req.body.ratings) {
+    bookObject.ratings = JSON.parse(req.body.ratings);
+  }
+
   Book.updateOne(
     {
       _id: req.params.id,
@@ -105,6 +111,7 @@ const updateBookById = async (req, res) => {
       })
     );
 };
+
 // Contrôleur pour supprimer un livre par son ID avec l'image associée
 const deleteBookAndImageById = async (req, res) => {
   Book.findOne({
@@ -112,6 +119,7 @@ const deleteBookAndImageById = async (req, res) => {
   })
     .then((book) => {
       const filename = book.imageUrl.split("/images/")[1];
+      // boucle d'évenement non bloqué
       fs.unlink(`images/${filename}`, () => {
         Book.deleteOne({
           _id: req.params.id,
