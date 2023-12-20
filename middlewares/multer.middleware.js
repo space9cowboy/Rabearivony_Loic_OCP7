@@ -1,16 +1,21 @@
+// package pour gérer les fichiers
 const multer = require("multer");
+// compression d'image
 const sharp = require("sharp");
+const fs = require("fs");
 
 const MIME_TYPES = {
   "image/jpg": "jpg",
-  "image/jpeg": "jpg",
+  "image/jpeg": "jpeg",
   "image/png": "png",
 };
 
 const storage = multer.diskStorage({
+  // destination de stockage des fichiers
   destination: (req, file, callback) => {
-    callback(null, "./images");
+    callback(null, "images");
   },
+  // nom du fichier afin qu'il soit unique
   filename: (req, file, callback) => {
     const name = file.originalname.split(" ").join("_");
     const extension = MIME_TYPES[file.mimetype];
@@ -18,41 +23,41 @@ const storage = multer.diskStorage({
   },
 });
 
-// Modifier cette fonction pour intégrer la compression d'image
-const fileFilter = (req, file, cb) => {
-  if (file.mimetype === "image/jpeg" || file.mimetype === "image/png") {
-    cb(null, true);
-  } else {
-    cb(new Error("Invalid file type. Only JPEG and PNG are allowed."));
-  }
-};
+module.exports = multer({ storage }).single("image");
 
-const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
-}).single("image");
+const convertToWebp = (req, res, next) => {
+  // Je vérifie si une image a été chargé et si un chemin existe
+  if (req.file && req.file.path) {
+    const originalImagePath = req.file.path;
+    // je remplace l'extension par webp
+    const outputPath = req.file.path.replace(/\.[^.]+$/, ".webp");
 
-// Middleware de téléchargement d'image avec compression
-const uploadWithCompression = (req, res, next) => {
-  upload(req, res, (err) => {
-    if (err instanceof multer.MulterError) {
-      return res.status(400).json({ message: "File upload error" });
-    } else if (err) {
-      return res.status(400).json({ message: err.message });
-    }
-
-    // Utilisation de Sharp pour redimensionner et compresser l'image
-    sharp(req.file.path)
-      .resize({ width: 800 }) // Redimensionnement de l'image
-      .toFile("./images/compressed_" + req.file.filename) // Chemin pour l'image compressée
+    // Utilisation de la biblio sharp pour convertir l'image et la sauvegarder
+    sharp(originalImagePath)
+      .toFormat("webp")
+      .resize({
+        width: 800,
+        height: 800,
+        fit: "contain",
+      }) // redimension des images
+      .toFile(outputPath)
       .then(() => {
-        req.file.path = "./images/compressed_" + req.file.filename; // Mettre à jour le chemin vers l'image compressée
+        // Je vérifie si le fichier d'origine existe pour le supprimer
+        if (fs.existsSync(originalImagePath)) {
+          fs.unlinkSync(originalImagePath);
+        }
+        // mise à jour du chemin du fichier
+        req.file.path = outputPath.replace("images\\", "");
         next();
       })
       .catch((error) => {
-        return res.status(500).json({ message: "Image processing error" });
+        console.error("Error converting image to webp:", error);
+        next();
       });
-  });
+  } else {
+    // si aucune image, je passe au middleware suivant
+    next();
+  }
 };
 
-module.exports = { uploadWithCompression };
+module.exports.convertToWebp = convertToWebp;

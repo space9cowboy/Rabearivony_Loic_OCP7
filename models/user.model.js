@@ -6,7 +6,7 @@ const userSchema = new Schema({
   email: {
     type: String,
     required: true,
-    unique: true, // L'adresse e-mail doit être unique
+    unique: true, // L'adresse e-mail doit être unique (unicité)
     lowercase: true, // Convertir l'e-mail en minuscules
     trim: true, // Supprimer les espaces avant et après l'adresse e-mail
   },

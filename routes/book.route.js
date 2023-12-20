@@ -2,8 +2,8 @@ const express = require("express");
 const router = express.Router();
 const BookController = require("../controllers/book.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
-const upload = require("../middlewares/multer.middleware");
-const { uploadWithCompression } = require("../middlewares/multer.middleware");
+const multer = require("../middlewares/multer.middleware");
+const { convertToWebp } = require("../middlewares/multer.middleware");
 
 // Route pour récupérer tous les livres
 router.get("/api/books", BookController.getAllBooks);
@@ -14,15 +14,17 @@ router.get("/api/books/bestrating", BookController.getBestRatedBooks);
 // Route pour créer un nouveau livre avec image
 router.post(
   "/api/books",
+  multer,
   authMiddleware,
-  uploadWithCompression,
+  convertToWebp,
   BookController.createBook
 );
 // Route pour mettre à jour un livre par son ID
 router.put(
   "/api/books/:id",
+  multer,
   authMiddleware,
-  uploadWithCompression,
+  convertToWebp,
   BookController.updateBookById
 );
 // Route pour supprimer un livre par son ID avec l'image associée
