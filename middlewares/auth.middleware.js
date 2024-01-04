@@ -1,6 +1,7 @@
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 
+// ca empeche d'utiliser une route si le user n'est pas authentifié
 module.exports = (req, res, next) => {
   try {
     // Récupérer le token d'authentification du header

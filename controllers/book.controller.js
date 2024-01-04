@@ -60,6 +60,7 @@ const createBook = async (req, res) => {
 
   const book = new Book({
     ...bookObject,
+    // Gestion de création d'une image
     imageUrl: `${req.protocol}://${req.get("host")}/images/${
       req.file.filename
     }`,
@@ -73,11 +74,13 @@ const createBook = async (req, res) => {
     )
     .catch((error) => res.status(400).json({ erreur: error }));
 };
-// Contrôleur pour mettre à jour un livre par son ID
+
+// Controllers pour mettre à jour un livre par son ID
 const updateBookById = async (req, res) => {
   const bookObject = req.file
     ? {
         ...JSON.parse(req.body.book),
+        // Gestion de la modification d'image
         imageUrl: `${req.protocol}://${req.get("host")}/images/${
           req.file.filename
         }`,
@@ -86,40 +89,70 @@ const updateBookById = async (req, res) => {
         ...req.body,
       };
 
-  // Ajout de la modification des évaluations s'il y a lieu
   if (req.body.ratings) {
     bookObject.ratings = JSON.parse(req.body.ratings);
   }
 
-  Book.updateOne(
-    {
-      _id: req.params.id,
-    },
-    {
-      ...bookObject,
-      _id: req.params.id,
-    }
-  )
-    .then(() =>
-      res.status(200).json({
-        message: "Objet modifié !",
-      })
-    )
+  // Récupération de l'ID de l'utilisateur connecté depuis la session
+  const loggedInUserId = req.session.userId; // Assurez-vous que votre session stocke l'ID de l'utilisateur connecté
+
+  // Ajout de la vérification de l'ID du publicateur
+  Book.findOne({
+    _id: req.params.id,
+    userId: loggedInUserId, // Vérifie si l'ID de l'utilisateur connecté correspond au userId
+  })
+    .then((book) => {
+      if (!book) {
+        return res.status(403).json({
+          message: "Unauthorized: Publisher ID does not match.",
+        });
+      }
+
+      Book.updateOne(
+        {
+          _id: req.params.id,
+        },
+        {
+          ...bookObject,
+          _id: req.params.id,
+        }
+      )
+        .then(() =>
+          res.status(200).json({
+            message: "Objet modifié !",
+          })
+        )
+        .catch((error) =>
+          res.status(400).json({
+            error,
+          })
+        );
+    })
     .catch((error) =>
-      res.status(400).json({
+      res.status(500).json({
         error,
       })
     );
 };
 
-// Contrôleur pour supprimer un livre par son ID avec l'image associée
+// Controllers pour pouvoir supprimer un livre par son id
 const deleteBookAndImageById = async (req, res) => {
+  // Récupération de l'ID de l'utilisateur connecté depuis la session
+  const loggedInUserId = req.session.userId; // Assurez-vous que votre session stocke l'ID de l'utilisateur connecté
+
   Book.findOne({
     _id: req.params.id,
+    userId: loggedInUserId,
+    // Vérifie si l'ID de l'utilisateur connecté correspond au userId
   })
     .then((book) => {
+      if (!book) {
+        return res.status(403).json({
+          message: "Unauthorized: Publisher ID does not match.",
+        });
+      }
+      // Gestion de la suppression d'image
       const filename = book.imageUrl.split("/images/")[1];
-      // boucle d'évenement non bloqué
       fs.unlink(`images/${filename}`, () => {
         Book.deleteOne({
           _id: req.params.id,
@@ -142,6 +175,7 @@ const deleteBookAndImageById = async (req, res) => {
       })
     );
 };
+
 // Contrôleur pour ajouter une note à un livre par son ID
 const addRatingToBookById = async (req, res) => {
   try {
