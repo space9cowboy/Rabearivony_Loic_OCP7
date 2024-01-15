@@ -24,7 +24,7 @@ router.put(
   "/api/books/:id",
   multer,
   authMiddleware,
-  convertToWebp,
+
   BookController.updateBookById
 );
 // Route pour supprimer un livre par son ID avec l'image associée
